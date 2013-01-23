@@ -26,12 +26,17 @@ import ConfigParser
 
 # === User Config
 gh_username = "ignisphaseone"
-gh_password = None
+gh_password = "example"
 gh_token = None
+source_repo = ""
+target_repo = ""
 
 # === GH API Config
+gh_server = "https://api.github.com"
 
 # === GH Source/Target Config
+gh_source = ""
+gh_target = ""
 
 # === Classes
 class Auth:
@@ -59,23 +64,34 @@ class Auth:
         #--If you can't proceed, print an error and exit.
 
         if gh_token is not None:
+            print "Loading GitHub OAuth2 Token..."
             self.token = gh_token
         elif gh_username is not None and gh_password is not None:
+            print "Loading GitHub Username and Password..."
             self.username = gh_username
             self.password = gh_password
         else:
+            print "Loading from Config File..."
             try:
-                config = ConfigParser
-                #config parser stuff
-                pass
+                config = ConfigParser()
+                config.readfp(open('auth.config'))
+                print config.items("github")
+                section_name = "github"
+                try:
+                    self.token = config.get(section_name, "token")
+                except Exception:
+                    try:
+                        self.username = config.get(section_name, "username")
+                        self.password = config.get(section_name, "password")
+                    except Exception:
+                        raise InvalidAuthError("Cannot authenticate properly; no token, or no username/password")
             except Exception:
                 pass
 
         if self.token is None and (self.username is None or self.password is None):
+            print self.token, self.username, self.password
             raise InvalidAuthError("Cannot authenticate properly; no token, or no username/password")
 
-        #Check all the requirements for the API and see if you have proper
-        #  authorizations required for github issue migration.
         pass #/__init__
 
     def auth_req(self, req):
@@ -86,7 +102,7 @@ class Auth:
                 rdata = json.loads(req.get_data())
                 rdata["access_token"] = self.token
                 rdata["token_type"] = "bearer"
-            req.add_data(json.dumps(rdata, indent=4, sort_keys=True))
+            req.add_data(json.dumps(rdata, indent=2, sort_keys=True))
 
         #If you don't have a token, add basic authorization.
         else:
@@ -98,7 +114,13 @@ class Auth:
         pass #/post_auth_for_token
 
     def get_auths(self):
-        pass #/get_auths
+        #Check all the requirements for the API and see if you have proper
+        #  authorizations required for github issue migration.
+        req = new_req("%s/authorizations" % gh_server)
+        self.auth_req(req)
+        res = urllib2.urlopen(req)
+        data = json.load(res)[0]
+        return data["scopes"]
 
 class InvalidAuthError(Exception):
     '''
@@ -127,10 +149,17 @@ class CannotMigrateError(Exception):
         return repr(self.value)
 
 # === Functions
+def new_req(url):
+    res = urllib2.Request(url)
+    res.add_header("Content-Type", "application/json")
+    res.add_header("Accept", "application/json")
+    return res
 
 # === Main
 def main():
     auth = Auth()
+    if not "repo" in auth.get_auths():
+        exit("No 'repos' scope in api.github.com authorizations, exiting...")
     print "Game Over!"
     pass #/main
 
