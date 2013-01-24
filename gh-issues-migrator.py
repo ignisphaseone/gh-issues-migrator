@@ -38,6 +38,7 @@ gh_server = "https://api.github.com"
 gh_source = ""
 gh_target = ""
 
+
 # === Classes
 class Auth:
     '''
@@ -92,14 +93,16 @@ class Auth:
             print self.token, self.username, self.password
             raise InvalidAuthError("Cannot authenticate properly; no token, or no username/password")
 
-        pass #/__init__
-
     def auth_req(self, req):
         # Check if you have a token, and add it to the existing data in the URL.
-        if self.token is not None and req.has_data():
-            rdata = json.loads(req.get_data())
-            if not (rdata.has_key("access_token") or rdata.has_key("token_type")):
-                rdata = json.loads(req.get_data())
+        if self.token is not None:
+            # If it's already got data, make sure it doesn't already have access_token and token_type keys.
+            if req.has_data() and not ("access_token" in req.get_data() or "token_type" in req.get_data()):
+                    rdata = json.loads(req.get_data())
+                    rdata["access_token"] = self.token
+                    rdata["token_type"] = "bearer"
+            else:
+                rdata = {}
                 rdata["access_token"] = self.token
                 rdata["token_type"] = "bearer"
             req.add_data(json.dumps(rdata, indent=2, sort_keys=True))
@@ -108,19 +111,20 @@ class Auth:
         else:
             req.add_header("Authorization", "Basic " + base64.urlsafe_b64encode(
                            "%s:%s" % (self.username, self.password)))
-        pass #/auth_req
 
     def post_auth_for_token(self):
-        pass #/post_auth_for_token
+        pass
 
     def get_auths(self):
         #Check all the requirements for the API and see if you have proper
         #  authorizations required for github issue migration.
+        #  This does not work if you are using token authorization though...
         req = new_req("%s/authorizations" % gh_server)
         self.auth_req(req)
         res = urllib2.urlopen(req)
         data = json.load(res)[0]
         return data["scopes"]
+
 
 class InvalidAuthError(Exception):
     '''
@@ -132,8 +136,10 @@ class InvalidAuthError(Exception):
     '''
     def __init__(self, value):
         self.value = value
+
     def __str__(self):
         return repr(self.value)
+
 
 class CannotMigrateError(Exception):
     '''
@@ -145,8 +151,10 @@ class CannotMigrateError(Exception):
     '''
     def __init__(self, value):
         self.value = value
+
     def __str__(self):
         return repr(self.value)
+
 
 # === Functions
 def new_req(url):
@@ -155,13 +163,14 @@ def new_req(url):
     res.add_header("Accept", "application/json")
     return res
 
+
 # === Main
 def main():
     auth = Auth()
-    if not "repo" in auth.get_auths():
+    if auth.token is not None and not "repo" in auth.get_auths():
+        # Github does not allow getting a list of authentications for a given token.
         exit("No 'repos' scope in api.github.com authorizations, exiting...")
     print "Game Over!"
-    pass #/main
 
 if __name__ == '__main__':
     main()
