@@ -28,15 +28,11 @@ import ConfigParser
 gh_username = "ignisphaseone"
 gh_password = "example"
 gh_token = None
-source_repo = ""
-target_repo = ""
+source_repo = "test2"
+target_repo = "test3"
 
 # === GH API Config
 gh_server = "https://api.github.com"
-
-# === GH Source/Target Config
-gh_source = ""
-gh_target = ""
 
 
 # === Classes
@@ -112,9 +108,6 @@ class Auth:
             req.add_header("Authorization", "Basic " + base64.urlsafe_b64encode(
                            "%s:%s" % (self.username, self.password)))
 
-    def post_auth_for_token(self):
-        pass
-
     def get_auths(self):
         #Check all the requirements for the API and see if you have proper
         #  authorizations required for github issue migration.
@@ -124,6 +117,9 @@ class Auth:
         res = urllib2.urlopen(req)
         data = json.load(res)[0]
         return data["scopes"]
+
+# === Globals
+auth = Auth()
 
 
 class InvalidAuthError(Exception):
@@ -164,12 +160,73 @@ def new_req(url):
     return res
 
 
+def get_src_milestones():
+    req = new_req("%s/repos/%s/%s/milestones" % (gh_server, gh_username, source_repo))
+    print "%s/repos/%s/%s/milestones" % (gh_server, gh_username, source_repo)
+    auth.auth_req(req)
+    res = urllib2.urlopen(req)
+    data = json.load(res)
+    print json.dumps(data, indent=4, sort_keys=True)
+    return data
+
+
+def get_src_labels():
+    req = new_req("%s/repos/%s/%s/labels" % (gh_server, gh_username, source_repo))
+    print "%s/repos/%s/%s/labels" % (gh_server, gh_username, source_repo)
+    auth.auth_req(req)
+    res = urllib2.urlopen(req)
+    data = json.load(res)
+    print json.dumps(data, indent=4, sort_keys=True)
+    return data
+
+
+def get_src_issues():
+    req = new_req("%s/repos/%s/%s/issues" % (gh_server, gh_username, source_repo))
+    print "%s/repos/%s/%s/issues" % (gh_server, gh_username, source_repo)
+    auth.auth_req(req)
+    res = urllib2.urlopen(req)
+    data = json.load(res)
+    print json.dumps(data, indent=4, sort_keys=True)
+    return data
+
+
+def get_tar_milestones():
+    req = new_req("%s/repos/%s/%s/milestones" % (gh_server, gh_username, target_repo))
+    print "%s/repos/%s/%s/milestones" % (gh_server, gh_username, target_repo)
+    auth.auth_req(req)
+    res = urllib2.urlopen(req)
+    data = json.load(res)
+    print json.dumps(data, indent=4, sort_keys=True)
+    return data
+
+
+def get_tar_labels():
+    req = new_req("%s/repos/%s/%s/labels" % (gh_server, gh_username, target_repo))
+    print "%s/repos/%s/%s/labels" % (gh_server, gh_username, target_repo)
+    auth.auth_req(req)
+    res = urllib2.urlopen(req)
+    data = json.load(res)
+    print json.dumps(data, indent=4, sort_keys=True)
+    return data
+
+
+def get_tar_issues():
+    req = new_req("%s/repos/%s/%s/issues" % (gh_server, gh_username, target_repo))
+    print "%s/repos/%s/%s/issues" % (gh_server, gh_username, target_repo)
+    auth.auth_req(req)
+    res = urllib2.urlopen(req)
+    data = json.load(res)
+    print json.dumps(data, indent=4, sort_keys=True)
+    return data
+
 # === Main
 def main():
-    auth = Auth()
-    if auth.token is not None and not "repo" in auth.get_auths():
-        # Github does not allow getting a list of authentications for a given token.
-        exit("No 'repos' scope in api.github.com authorizations, exiting...")
+    src_milestones = get_src_milestones()
+    src_labels = get_src_labels()
+    src_issues = get_src_issues()
+    tar_milestones = get_tar_milestones()
+    tar_labels = get_tar_labels()
+    tar_issues = get_tar_issues()
     print "Game Over!"
 
 if __name__ == '__main__':
